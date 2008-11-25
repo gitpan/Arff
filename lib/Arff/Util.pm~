@@ -76,7 +76,7 @@ Get arff file path and load it in buffer
 
 =cut
 
-sub load_from_file {
+sub load_arff {
 	my ($arff_file) = @_;
 	local *FILE;
 	open(FILE, $arff_file);
@@ -150,22 +150,75 @@ sub load_from_file {
 # 	cluck Dumper $relation;
 	cluck "$arff_file loaded with $error_count error(s).";
 	cluck "Buffer size: ".total_size($relation)." bytes";
-	return 1;
+	return $relation;
 }
 
 =head2 save_arff
 
-Save given buffer into the .arff formatted file. This method is not implemented yet.
+Save given buffer into the .arff formatted file. 
 
 =cut
 
 sub save_arff {
-	my ($buffer,$file_name) = @_;
+	my ($buffer,$arff_file) = @_;
 	
-	croak "Not implemented yet!";
+	local *FILE;
 	
+	open(FILE, ">$arff_file");
+	
+	my $record_count = 0;
+ 	my $error_count = 0;
+ 	
+	cluck "Writing buffer to $arff_file ...";
+	
+	if($buffer -> {"relation_name"})
+	{
+		print FILE q/@RELATION / . $buffer -> {"relation_name"} . "\n";
+	}
+	print FILE "\n";
+	print FILE "\n";
+
+	if($buffer -> {"attributes"}){
+		foreach my $attribute (@{$buffer -> {"attributes"}}){
+			print FILE q/@ATTRIBUTE / . $attribute->{attribute_name} . q/ / . $attribute->{attribute_type} . "\n";
+		}
+		print FILE "\n";
+		print FILE "\n";
+	
+		if($buffer -> {"records"}){
+			print FILE "\@DATA\n";
+			print FILE "\n";
+
+			foreach my $record (@{$buffer -> {"records"}}){
+				my $record_string = q//;
+				foreach my $attribute (@{$buffer -> {"attributes"}}){
+					if($record->{$attribute->{attribute_name}}){
+						$record_string .= $record->{$attribute->{attribute_name}} . q/,/;
+					}else{
+						cluck "Invali buffer passed, ".$attribute->{attribute_name}." is not defined for record... write UNKNOWN";
+						$record_string .= q/UNKNOWN,/;
+						$error_count++;
+					}
+				}
+
+				$record_string =~ s/,$//;
+
+				print FILE $record_string . "\n";
+				$record_count ++;
+			}
+		}
+	}
+
+	cluck "Buffer saved to $arff_file with $error_count error(s).";
+	cluck "Buffer size: ".total_size($relation)." bytes";
+	cluck "Data rows count: ".$record_count."";
+
 	return 1;
 }
+
+load_arff("c-train.arff");
+
+save_arff($relation , "c-train2.arff");
 
 =head1 AUTHOR
 
